@@ -113,31 +113,30 @@ async function showHistorico(){
 
     const status = document.getElementById("historicoStatus");
     const lista = document.getElementById("historicoLista");
-    status.textContent = "Carregando entregas...";
+    status.textContent = "Carregando movimentações...";
     lista.innerHTML = "";
 
     try {
         const { data, error } = await supabaseClient
-            .from("deliveries")
-            .select("id, delivery_date, destination_name, destination_address, delivery_items(quantity, products(name))")
-            .order("delivery_date", { ascending: false });
+            .from("stock_movements")
+            .select("id, created_at, movement_type, quantity, notes, products(name)")
+            .order("created_at", { ascending: false });
 
         if (error) throw error;
 
         if (!data.length) {
-            status.textContent = "Nenhuma entrega cadastrada.";
+            status.textContent = "Nenhuma movimentação cadastrada.";
             return;
         }
 
-        data.forEach((entrega) => {
-            const item = entrega.delivery_items?.[0];
+        data.forEach((movimentacao) => {
             const linha = document.createElement("tr");
             [
-                entrega.delivery_date,
-                item?.products?.name || "-",
-                item?.quantity ?? "-",
-                entrega.destination_name || "-",
-                entrega.destination_address || "-"
+                new Date(movimentacao.created_at).toLocaleString("pt-BR"),
+                movimentacao.products?.name || "-",
+                movimentacao.movement_type || "-",
+                movimentacao.quantity ?? "-",
+                movimentacao.notes || "-"
             ].forEach((valor) => {
                 const celula = document.createElement("td");
                 celula.textContent = valor;
@@ -149,38 +148,32 @@ async function showHistorico(){
             botaoExcluir.type = "button";
             botaoExcluir.textContent = "Excluir";
             botaoExcluir.className = "btn-excluir";
-            botaoExcluir.addEventListener("click", () => excluirEntrega(entrega.id, botaoExcluir));
+            botaoExcluir.addEventListener("click", () => excluirMovimentacao(movimentacao.id, botaoExcluir));
             acoes.appendChild(botaoExcluir);
             linha.appendChild(acoes);
             lista.appendChild(linha);
         });
-        status.textContent = `${data.length} entrega(s) encontrada(s).`;
+        status.textContent = `${data.length} movimentação(ões) encontrada(s).`;
     } catch (erro) {
         status.textContent = `Não foi possível carregar o histórico: ${erro.message}`;
     }
 }
 
-async function excluirEntrega(entregaId, botao) {
-    if (!window.confirm("Excluir esta entrega?")) return;
+async function excluirMovimentacao(movimentacaoId, botao) {
+    if (!window.confirm("Excluir esta movimentação?")) return;
 
     botao.disabled = true;
     try {
-        const { error: itemError } = await supabaseClient
-            .from("delivery_items")
+        const { error } = await supabaseClient
+            .from("stock_movements")
             .delete()
-            .eq("delivery_id", entregaId);
-        if (itemError) throw itemError;
-
-        const { error: entregaError } = await supabaseClient
-            .from("deliveries")
-            .delete()
-            .eq("id", entregaId);
-        if (entregaError) throw entregaError;
+            .eq("id", movimentacaoId);
+        if (error) throw error;
 
         await showHistorico();
     } catch (erro) {
         botao.disabled = false;
-        alert(`Não foi possível excluir a entrega: ${erro.message}`);
+        alert(`Não foi possível excluir a movimentação: ${erro.message}`);
     }
 }
 
