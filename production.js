@@ -53,6 +53,8 @@ async function handleProductionSubmit(event) {
     if (defective > produced) throw new Error("A quantidade defeituosa não pode superar a produzida.");
 
     const { error } = await supabaseClient.from("production_records").insert({
+        client_name: document.getElementById("itemCliente").value.trim(),
+        client_address: address,
         production_date: document.getElementById("producaoData").value,
         responsible_id: user.id,
         product_id: document.getElementById("producaoProduto").value,
